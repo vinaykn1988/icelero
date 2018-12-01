@@ -1,0 +1,73 @@
+service: sample-project
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-dynamodb-local
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+
+  stage: dev
+  region: us-east-1
+
+  environment:
+    transformations: ${self:custom.db-transformations}
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:QueryItem
+        - dynamodb:Scan
+        - dynamodb:Query
+        - dynamodb:Delete
+      Resource: arn:aws:dynamodb:*:*:table/${self:custom.db-transformations}
+
+package:
+  exclude:
+    - node_modules/**/*
+  include:
+    - src/node_modules/**/*
+
+custom:
+  region: ${self:provider.region}
+  stage: ${opt:stage, self:provider.stage}
+  prefix: ${self:service}-${self:custom.stage}
+  db-transformations: ${self:custom.prefix}-table
+
+  dynamodb:
+      start:
+        migrate: true
+
+functions:
+
+  sample-function:
+    handler: src/api-functions/index.handler
+    events:
+      - http:
+          path: data
+          method: ANY
+          authorizer: aws_iam
+      - http:
+          path: data/{proxy+}
+          method: ANY
+          authorizer: aws_iam
+
+resources:
+  Resources:
+    Transformations:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.db-transformations}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: N
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
