@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "serverless-http": "^1.8.0",
     "serverless-plugin-typescript": "^1.1.5"
   },
   "devDependencies": {
